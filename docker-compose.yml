@@ -1,0 +1,11 @@
+version: "3"
+services:
+  fireup:
+    image: local/fireup
+    container_name: fireup
+    restart: always
+    env_file:
+      - fireup.env
+    volumes:
+      - ./app:/app
+    network_mode: host
