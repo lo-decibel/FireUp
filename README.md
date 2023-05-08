@@ -51,7 +51,7 @@ docker build -t local/fireup .
 
 ### Configuring the webserver
 
-In the environment file, `.env`, edit following environment variables as needed.
+In the environment file, `fireup.env`, edit following environment variables as needed.
 
 ```ini
 # Your Up webhook endpoint.
@@ -79,13 +79,13 @@ docker compose up -d
 It's also possible to run the webserver without Docker. You will need a working install of Python, and you'll need to install the following packages:
 
 ```
-pip install emoji requests flask waitress python-dotenv[cli]
+pip install emoji requests flask waitress python-dotenv
 ```
 
 Load the environment variables and run the webserver with
 
 ```
-dotenv run python -u ./app/main.py &
+dotenv -f ./fireup.env run python ./app/main.py &
 ```
 
 LICENSE: CC BY-NC-SA
