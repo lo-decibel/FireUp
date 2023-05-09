@@ -3,7 +3,13 @@
 Python webserver to connect your UP accounts with [Firefly III](https://www.firefly-iii.org). The inspiration came from a [different project by Gustav de Prez](https://github.com/Mugl3/UP_Firefly_API_Connector). This project takes a different approach with the code written from scratch, and adds some useful features. Can easily be deployed in a Docker container.
 
 This is my first released Python project. Expect a few bugs at this stage, as I'm still working everything out. Pull requests are welcome as I can always use some help with my coding!
- 
+
+#### Changelog
+##### v0.0.2
+Fixed a bug where categorised transactions would not import
+##### v0.0.1
+Initial release
+
 ## Features
 
 * Listens for new activity on your Up accounts

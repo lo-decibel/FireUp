@@ -69,7 +69,11 @@ class Up(API):
         self._post('webhooks', {'data': {'attributes': {'url': self._wh, 'description': 'FireUp'}}})
         
     def cats(self):
-        return self._get('categories')
+        data = {}
+        for c in self._get('categories'):
+            if c['relationships']['parent']['data'] != None:
+                data[c['id']] = c['attributes']['name']
+        return data
     
     def accts(self):
         accts = self._get('accounts')
@@ -96,10 +100,10 @@ class Firefly(API):
         super().__init__(token, url, 'about')
     
     def cats(self):
-        cc = []
+        data = []
         for c in self._get('categories'):
-            cc.append(c['attributes']['name'])
-        return cc
+            data.append(c['attributes']['name'])
+        return data
     
     def acct_id(self, number):
         for a in self._get('accounts'):
@@ -141,7 +145,7 @@ class Firefly(API):
         self._delete(f'transactions/{id}')
     
     def add_cat(self, name):
-        self._post('categories', payload={'name': name})
+        self._post('categories', {'name': name})
 
 def main():
     def xstr(s):
@@ -244,6 +248,7 @@ def main():
             d['tags'] = tags
             d['date'] = trans['attributes']['createdAt']
             d['amount'] = str(abs(amnt))
+            
             ff.create_trans(d)
         
         return Response(status=200)
