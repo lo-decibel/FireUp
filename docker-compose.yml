@@ -6,6 +6,4 @@ services:
     restart: always
     env_file:
       - fireup.env
-    volumes:
-      - ./app:/app
     network_mode: host

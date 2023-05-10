@@ -5,8 +5,13 @@ Python webserver to connect your UP accounts with [Firefly III](https://www.fire
 This is my first released Python project. Expect a few bugs at this stage, as I'm still working everything out. Pull requests are welcome as I can always use some help with my coding!
 
 #### Changelog
+
+##### v0.0.3
+Supports covers
+
 ##### v0.0.2
 Fixed a bug where categorised transactions would not import
+
 ##### v0.0.1
 Initial release
 
@@ -14,7 +19,7 @@ Initial release
 
 * Listens for new activity on your Up accounts
 * Adds, deletes, and settles transactions
-* Support for round-ups, transfers and quick saves.
+* Support for round ups, transfers, covers and quick saves.
 * Supports Up categories
 * Supports foreign currencies
 * Accounts and balances automatically added to Firefly on first run
@@ -27,12 +32,11 @@ Initial release
 * All transactions are tagged with "FireUp"
 * If you rename an Up account, you will need to restart the server for the change to be reflected in Firefly. 
 * Foreign currency amounts are appended to the transaction description 
-* Up account emojis are stripped from the account name in Firefly. I may add an option to keep them in future.
+* Up account emojis are stripped from the account name in Firefly.
 * Does not import your past account activity.
 
 ### Roadmap
 
-* Other transaction types (e.g. covers) 
 * Ability to retrieve missing transactions in Firefly if the webserver goes down.
 * More robust handling of errors
 

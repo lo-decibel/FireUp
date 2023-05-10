@@ -226,6 +226,8 @@ def main():
                     text = 'Transfer'
                 elif desc == 'Round Up':
                     text = 'Round Up'
+                elif desc.startswith('Cover from'):
+                    text = 'Cover'
      
                 d['type'] = 'transfer'
                 d['source_name'] = accts[trans['relationships']['transferAccount']['data']['id']]['name']
