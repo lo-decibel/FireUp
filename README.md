@@ -31,9 +31,11 @@ Initial release
 * Up account IDs are saved as account numbers in Firefly
 * All transactions are tagged with "FireUp"
 * If you rename an Up account, you will need to restart the server for the change to be reflected in Firefly. 
-* Foreign currency amounts are appended to the transaction description 
-* Up account emojis are stripped from the account name in Firefly.
-* Does not import your past account activity.
+* Foreign currency amounts are appended to the transaction description
+* Only imports sub-categories, not parent categories
+* Unsettled transactions are prefixed with "[HELD]". This text is removed once the transaction is settled.
+* Up account emojis are stripped from the account name in Firefly
+* Does not import your past account activity
 
 ### Roadmap
 
