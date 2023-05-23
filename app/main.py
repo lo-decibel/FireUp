@@ -122,6 +122,12 @@ class Firefly(API):
     
     def trans(self, id):
         return self._get(f'tags/{id}/transactions')[0]
+    
+    def trans_exists(self, ref):
+        try:
+            return True if ref == self._get(f'search/transactions?query=internal_reference_is:{ref}')[0]['attributes']['transactions'][0]['internal_reference'] else False
+        except:
+            return False
         
     def create_acct(self, data):
         data['type'] = 'asset'
@@ -153,7 +159,7 @@ def main():
     
     up = Up(getenv('UP_TOKEN'), getenv('WEBHOOK_URL'))
     ff = Firefly(getenv('FIREFLY_TOKEN'), getenv('FIREFLY_URL'))
-
+      
     # Check connection
     if not up.ping():
         print('Unable to connect to UP.')
@@ -198,59 +204,60 @@ def main():
             ff.settle_trans(ff.trans(trans['id'])['id'])
             
         elif event == 'TRANSACTION_CREATED':
-            acct = accts[trans['relationships']['account']['data']['id']]['name']
-            amnt = float(trans['attributes']['amount']['value'])
-            text = xstr(trans['attributes']['rawText'])
-            name = accts[trans['relationships']['account']['data']['id']]['name']
-            desc = trans['attributes']['description']
-            tags = ['FireUp']
-            d = {}
+            if not ff.trans_exists(trans['id']):
+                acct = accts[trans['relationships']['account']['data']['id']]['name']
+                amnt = float(trans['attributes']['amount']['value'])
+                text = xstr(trans['attributes']['rawText'])
+                name = accts[trans['relationships']['account']['data']['id']]['name']
+                desc = trans['attributes']['description']
+                tags = ['FireUp']
+                d = {}
 
-            if not trans['relationships']['transferAccount']['data']:
-                if amnt > 0:
-                    d['type'] = 'deposit'
-                    d['source_name'] = desc
-                    d['destination_name'] = name
-                elif amnt < 0:
-                    d['type'] = 'withdrawal'
-                    d['source_name'] = name
-                    d['destination_name'] = desc
+                if not trans['relationships']['transferAccount']['data']:
+                    if amnt > 0:
+                        d['type'] = 'deposit'
+                        d['source_name'] = desc
+                        d['destination_name'] = name
+                    elif amnt < 0:
+                        d['type'] = 'withdrawal'
+                        d['source_name'] = name
+                        d['destination_name'] = desc
+                
+                else:
+                    if desc.startswith('Quick save transfer to') or desc.startswith('Transfer to'):
+                        return Response(status=200)
+                    elif desc.startswith('Quick save transfer from'):
+                        text = 'Quick Save'
+                    elif desc.startswith('Transfer from'):
+                        text = 'Transfer'
+                    elif desc == 'Round Up':
+                        text = 'Round Up'
+                    elif desc.startswith('Cover from'):
+                        text = 'Cover'
             
-            else:
-                if desc.startswith('Quick save transfer to') or desc.startswith('Transfer to'):
-                    return Response(status=200)
-                elif desc.startswith('Quick save transfer from'):
-                    text = 'Quick Save'
-                elif desc.startswith('Transfer from'):
-                    text = 'Transfer'
-                elif desc == 'Round Up':
-                    text = 'Round Up'
-                elif desc.startswith('Cover from'):
-                    text = 'Cover'
-     
-                d['type'] = 'transfer'
-                d['source_name'] = accts[trans['relationships']['transferAccount']['data']['id']]['name']
-                d['destination_name'] = acct
+                    d['type'] = 'transfer'
+                    d['source_name'] = accts[trans['relationships']['transferAccount']['data']['id']]['name']
+                    d['destination_name'] = acct
 
-                tags.append(text)
-                desc = '[HELD] ' + text if trans['attributes']['status'] == 'HELD' else text
-                msg = xstr(trans['attributes']['message'])
-                if msg:
-                    if text:
-                        msg = f'({msg})'
-                    desc = f'{desc} {msg}'
-                if trans['attributes']['foreignAmount']:
-                    foreign_amnt = trans['attributes']['foreignAmount']['value'] + ' ' + trans['attributes']['foreignAmount']['currencyCode']
-                    desc = f'{desc} {foreign_amnt}'
+                    tags.append(text)
+                    desc = '[HELD] ' + text if trans['attributes']['status'] == 'HELD' else text
+                    msg = xstr(trans['attributes']['message'])
+                    if msg:
+                        if text:
+                            msg = f'({msg})'
+                        desc = f'{desc} {msg}'
+                    if trans['attributes']['foreignAmount']:
+                        foreign_amnt = trans['attributes']['foreignAmount']['value'] + ' ' + trans['attributes']['foreignAmount']['currencyCode']
+                        desc = f'{desc} {foreign_amnt}'
 
-            d['internal_reference'] = trans['id']
-            d['description'] = desc
-            d['category_name'] = up_cats[trans['relationships']['category']['data']['id']] if trans['relationships']['category']['data'] else None
-            d['tags'] = tags
-            d['date'] = trans['attributes']['createdAt']
-            d['amount'] = str(abs(amnt))
-           
-            ff.create_trans(d)
+                d['internal_reference'] = trans['id']
+                d['description'] = desc
+                d['category_name'] = up_cats[trans['relationships']['category']['data']['id']] if trans['relationships']['category']['data'] else None
+                d['tags'] = tags
+                d['date'] = trans['attributes']['createdAt']
+                d['amount'] = str(abs(amnt))
+                
+                ff.create_trans(d)
         
         return Response(status=200)
             
