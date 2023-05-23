@@ -6,6 +6,10 @@ This is my first released Python project. Expect a few bugs at this stage, as I'
 
 #### Changelog
 
+##### v0.0.4
+For some reason, the Up API starting reporting transactions twice. 
+FireUp will now only add the same transaction once.
+
 ##### v0.0.3
 Supports covers
 
