@@ -180,9 +180,8 @@ def main():
     up_cats = up.cats()
     ff_cats = ff.cats()
     for c in up_cats:
-        cat = c['attributes']['name']
-        if cat not in ff_cats:
-            ff.add_cat(cat)
+        if up_cats[c] not in ff_cats:
+            ff.add_cat(up_cats[c])
     
     # Listen for webhooks
     app = Flask(__name__)
@@ -250,7 +249,7 @@ def main():
             d['tags'] = tags
             d['date'] = trans['attributes']['createdAt']
             d['amount'] = str(abs(amnt))
-            
+           
             ff.create_trans(d)
         
         return Response(status=200)
@@ -260,4 +259,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-        
