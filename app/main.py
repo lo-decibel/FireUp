@@ -3,6 +3,8 @@ from datetime import datetime
 from waitress import serve
 from emoji import replace_emoji
 from os import getenv
+from time import sleep
+from threading import Thread
 from requests import get, post, put, delete, RequestException
 
 class API:
@@ -98,6 +100,16 @@ class Up(API):
 class Firefly(API):
     def __init__(self, token, url):
         super().__init__(token, url, 'about')
+        self.queue = []
+        Thread(target=self._add_from_queue).start()
+        
+    def _add_from_queue(self):
+        while True:
+            if len(self.queue) > 0:
+                if not self._trans_exists(self.queue[0]['internal_reference']):
+                    self._create_trans(self.queue[0])
+                self.queue.pop(0)
+            sleep(0.1)
     
     def cats(self):
         data = []
@@ -123,7 +135,7 @@ class Firefly(API):
     def trans(self, id):
         return self._get(f'tags/{id}/transactions')[0]
     
-    def trans_exists(self, ref):
+    def _trans_exists(self, ref):
         try:
             return True if ref == self._get(f'search/transactions?query=internal_reference_is:{ref}')[0]['attributes']['transactions'][0]['internal_reference'] else False
         except:
@@ -135,7 +147,7 @@ class Firefly(API):
         data['opening_balance_date'] = datetime.now().strftime('%Y-%m-%d')
         self._post('accounts', data)
     
-    def create_trans(self, data):
+    def _create_trans(self, data):
         self._post('transactions', {'transactions': [data]})
         
     def settle_trans(self, id):
@@ -204,60 +216,59 @@ def main():
             ff.settle_trans(ff.trans(trans['id'])['id'])
             
         elif event == 'TRANSACTION_CREATED':
-            if not ff.trans_exists(trans['id']):
-                acct = accts[trans['relationships']['account']['data']['id']]['name']
-                amnt = float(trans['attributes']['amount']['value'])
-                text = xstr(trans['attributes']['rawText'])
-                name = accts[trans['relationships']['account']['data']['id']]['name']
-                desc = trans['attributes']['description']
-                tags = ['FireUp']
-                d = {}
+            acct = accts[trans['relationships']['account']['data']['id']]['name']
+            amnt = float(trans['attributes']['amount']['value'])
+            text = xstr(trans['attributes']['rawText'])
+            name = accts[trans['relationships']['account']['data']['id']]['name']
+            desc = trans['attributes']['description']
+            tags = ['FireUp']
+            d = {}
 
-                if not trans['relationships']['transferAccount']['data']:
-                    if amnt > 0:
-                        d['type'] = 'deposit'
-                        d['source_name'] = desc
-                        d['destination_name'] = name
-                    elif amnt < 0:
-                        d['type'] = 'withdrawal'
-                        d['source_name'] = name
-                        d['destination_name'] = desc
-                
-                else:
-                    if desc.startswith('Quick save transfer to') or desc.startswith('Transfer to'):
-                        return Response(status=200)
-                    elif desc.startswith('Quick save transfer from'):
-                        text = 'Quick Save'
-                    elif desc.startswith('Transfer from'):
-                        text = 'Transfer'
-                    elif desc == 'Round Up':
-                        text = 'Round Up'
-                    elif desc.startswith('Cover from'):
-                        text = 'Cover'
+            if not trans['relationships']['transferAccount']['data']:
+                if amnt > 0:
+                    d['type'] = 'deposit'
+                    d['source_name'] = desc
+                    d['destination_name'] = name
+                elif amnt < 0:
+                    d['type'] = 'withdrawal'
+                    d['source_name'] = name
+                    d['destination_name'] = desc
             
-                    d['type'] = 'transfer'
-                    d['source_name'] = accts[trans['relationships']['transferAccount']['data']['id']]['name']
-                    d['destination_name'] = acct
+            else:
+                if desc.startswith('Quick save transfer to') or desc.startswith('Transfer to'):
+                    return Response(status=200)
+                elif desc.startswith('Quick save transfer from'):
+                    text = 'Quick Save'
+                elif desc.startswith('Transfer from'):
+                    text = 'Transfer'
+                elif desc == 'Round Up':
+                    text = 'Round Up'
+                elif desc.startswith('Cover from'):
+                    text = 'Cover'
+        
+                d['type'] = 'transfer'
+                d['source_name'] = accts[trans['relationships']['transferAccount']['data']['id']]['name']
+                d['destination_name'] = acct
 
-                    tags.append(text)
-                    desc = '[HELD] ' + text if trans['attributes']['status'] == 'HELD' else text
-                    msg = xstr(trans['attributes']['message'])
-                    if msg:
-                        if text:
-                            msg = f'({msg})'
-                        desc = f'{desc} {msg}'
-                    if trans['attributes']['foreignAmount']:
-                        foreign_amnt = trans['attributes']['foreignAmount']['value'] + ' ' + trans['attributes']['foreignAmount']['currencyCode']
-                        desc = f'{desc} {foreign_amnt}'
+                tags.append(text)
+                desc = '[HELD] ' + text if trans['attributes']['status'] == 'HELD' else text
+                msg = xstr(trans['attributes']['message'])
+                if msg:
+                    if text:
+                        msg = f'({msg})'
+                    desc = f'{desc} {msg}'
+                if trans['attributes']['foreignAmount']:
+                    foreign_amnt = trans['attributes']['foreignAmount']['value'] + ' ' + trans['attributes']['foreignAmount']['currencyCode']
+                    desc = f'{desc} {foreign_amnt}'
 
-                d['internal_reference'] = trans['id']
-                d['description'] = desc
-                d['category_name'] = up_cats[trans['relationships']['category']['data']['id']] if trans['relationships']['category']['data'] else None
-                d['tags'] = tags
-                d['date'] = trans['attributes']['createdAt']
-                d['amount'] = str(abs(amnt))
-                
-                ff.create_trans(d)
+            d['internal_reference'] = trans['id']
+            d['description'] = desc
+            d['category_name'] = up_cats[trans['relationships']['category']['data']['id']] if trans['relationships']['category']['data'] else None
+            d['tags'] = tags
+            d['date'] = trans['attributes']['createdAt']
+            d['amount'] = str(abs(amnt))      
+ 
+            ff.queue.append(d)
         
         return Response(status=200)
             
